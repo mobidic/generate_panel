@@ -1,0 +1,36 @@
+[build-system]
+requires = [
+    "setuptools >= 61.0"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "generate_panels"
+dynamic = ["version"]
+authors = [
+    {name="Charles VAN GOETHEM", email="c-vangoethem@chu-montpellier.fr"},
+]
+description = "Tool to generate panels into bed format from a gene list"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "cyvcf2",
+    "liftover",
+    "pandas",
+    "pybedtools"
+]
+
+license = {file = "LICENSE"}
+
+[project.scripts]
+generate-panel = "generate_panels.generate_panels:script"
+
+
+[project.urls]
+Homepage = "https://github.com/mobidic/generate_panels"
+Issues = "https://github.com/mobidic/generate_panels/issues"
