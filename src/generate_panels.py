@@ -16,6 +16,7 @@ from liftover import get_lifter
 import pandas as pd
 import pybedtools
 
+
 def common_member(a, b):
     """
     Checks if there are any common elements between two sets.
@@ -312,7 +313,8 @@ def main(args):
             print(f'    - {i} (type {args.type} not found for this gene ; clinvar variants with {args.clinvar_clnsig} were selected)')
 
     return
-    
+   
+ 
 def script():
     # Argument configuration
     parser = argparse.ArgumentParser(description="My Generic Python Script", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -341,7 +343,7 @@ def script():
 
     if not (args.gene or args.genes_list):
         parser.error('No genes provided, add --gene (-g) or --genes-list')
-
+    
     # Execution of the main function
     main(args)
 
