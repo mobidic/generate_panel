@@ -93,7 +93,7 @@ def parse_gtf(gtf_file, source=None, chromosomes=False, chunksize=5000):
                 if attribute:
                     match = re.findall(pattern, attribute)
                     if match[0][0] in attr:
-                        if attr[match[0][0]].isinstance(list):
+                        if isinstance(attr[match[0][0]], list):
                             attr[match[0][0]].append(match[0][1])
                         else:
                             attr[match[0][0]] = [attr[match[0][0]], match[0][1]]
@@ -119,30 +119,6 @@ def parse_gtf(gtf_file, source=None, chromosomes=False, chunksize=5000):
 
     return pd.DataFrame(gene_info)
 
-def split_df(dataframe, column, output):
-    """
-    Splits a pandas DataFrame into multiple DataFrames based on a unique
-    column value.
-
-    Args:
-        df (pandas.DataFrame): The input DataFrame.
-        column (str): The column name to split by.
-        output (str): The base filename for the split DataFrames.
-
-    Returns:
-        dict: A dictionary where keys are the unique column values and values
-        are the corresponding DataFrames.
-    """
-    elements = dataframe[column].unique()
-    df_splitted = dict()
-    for element in elements:
-        df_splitted[element] = dataframe.loc[dataframe[column] == element]
-        df_splitted[element].to_csv(
-            f'{output}.{element}.tsv',
-            index=False, sep="\t")
-
-    return df_splitted
-
 def get_bed(dataframe, types, padding, chr):
     """
     Creates a BED file from a pandas DataFrame containing gene annotations.
@@ -161,11 +137,8 @@ def get_bed(dataframe, types, padding, chr):
     """
     subset_df = dataframe[dataframe['type'].isin(types)]
 
-    subset_df.loc[:, "start"] = subset_df["start"] - padding
-    subset_df.loc[:, "end"] = subset_df["end"] + padding
-
-    if chr:
-        subset_df.loc[:, "chrom"] = subset_df["chrom"].map(chr)
+    subset_df.loc[:, "start"] = subset_df["start"] - int(padding)
+    subset_df.loc[:, "end"] = subset_df["end"] + int(padding)
 
     bed_df = subset_df[["chrom", "start", "end", "name"]]
 
@@ -212,10 +185,6 @@ def treat_variant(variant, clnsig_matches=False, dataframe=pd.DataFrame({"chrom"
         dataframe = pd.concat([dataframe, df2.to_frame().T], ignore_index=True)
     return dataframe
 
-
-
-
-
 def clinvar_to_bed(clinvar, region_df=False, clnsig_matches=False, max_len=50):
     """
     Converts a DataFrame containing ClinVar variants to a BED file format.
@@ -238,7 +207,7 @@ def clinvar_to_bed(clinvar, region_df=False, clnsig_matches=False, max_len=50):
 
     return bed_df
 
-def lovd_to_bed(filename, max_len):
+def lovd_to_bed(filename, max_len=50):
     """
     Converts a LOVD variant file to a BED file format.
 
@@ -260,16 +229,19 @@ def lovd_to_bed(filename, max_len):
         chrom = row["chromosome"]
         start = row["position_g_start"]
         end = row["position_g_end"]
-        conv_start = converter[chrom][start][0][1]
-        conv_end = converter[chrom][end][0][1] + 1
         name = row["URL"][16:]
-        if (conv_end - conv_start) > max_len:
+        conv_start = converter[chrom][start]
+        conv_end = converter[chrom][end]
+        if len(conv_start) != 1 or len(conv_end) != 1:
+            print(f"Multiple position for : '{name}' => please check manually")
+            continue
+        if (conv_end[0][1] - conv_start[0][1] + 1) > max_len:
             continue
 
         data.append({
             "chrom":chrom,
-            "start":conv_start,
-            "end": conv_end,
+            "start":conv_start[0][1],
+            "end": conv_end[0][1] + 1,
             "name": name
         })
 
@@ -322,22 +294,22 @@ def main(args):
     filtered_gene_df.to_csv(
         f'{args.output}.gene.bed',
         index=False, sep="\t", header=None)
+    
+    merged_df = df_selected
 
     if args.clinvar:
         df_clinvar = clinvar_to_bed(
             args.clinvar,
-            region_df=gtf_df[
-                (gtf_df['gene'].isin(genes))
-                & gtf_df['type'].isin(args.clinvar_type)
-            ],
+            region_df=filtered_gene_df,
             clnsig_matches=args.clinvar_clnsig,
             max_len=args.max_len_variants)
         df_clinvar.to_csv(
             f'{args.output}.clinvar.bed',
             index=False, sep="\t", header=None)
 
-    bed_clinvar = pybedtools.BedTool.from_dataframe(df_clinvar)
-    bed_clinvar_sub = bed_clinvar.subtract(bed_selected).to_dataframe()
+        bed_clinvar = pybedtools.BedTool.from_dataframe(df_clinvar)
+        bed_clinvar_sub = bed_clinvar.subtract(bed_selected).to_dataframe()
+        merged_df = pd.concat([df_selected, bed_clinvar_sub], ignore_index=True)
 
     if args.lovd:
         df_lovd = lovd_to_bed(args.lovd, args.max_len_variants)
@@ -345,8 +317,8 @@ def main(args):
         bed_lovd = pybedtools.BedTool.from_dataframe(df_lovd)
         bed_lovd_sub = bed_lovd.subtract(bed_selected).to_dataframe()
 
-    merged_df = pd.concat([df_selected, bed_clinvar_sub, bed_lovd_sub], ignore_index=True)
-    merged_df.to_csv(f'{args.output}.merge.bed', index=False, sep="\t", header=None)
+        merged_df.to_csv(f'{args.output}.merge.bed', index=False, sep="\t", header=None)
+        merged_df = pd.concat([df_selected, bed_lovd_sub], ignore_index=True)
 
     if missing_genes or missing_type:
         print(f'Missing genes : {len(missing_genes | missing_type)}')
