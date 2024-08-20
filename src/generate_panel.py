@@ -69,8 +69,8 @@ def parse_gtf(gtf_file, source=None, chromosomes=False, chunksize=5000):
         chunk = chunk[chunk['source'].apply(
             lambda sources_gtf: common_member(sources_gtf, source))]
 
-        chunk = chunk[chunk['chrom'].isin(chromosomes)]
         if chromosomes:
+            chunk = chunk[chunk['chrom'].isin(chromosomes)]
             # chunk = chunk[chunk['chrom'].isin([])]
             chunk.loc[:, "chrom"] = chunk["chrom"].map(chromosomes)
 
@@ -259,13 +259,16 @@ def main(args):
     if args.verbose:
         print("Mode verbose activé")
 
-    chr_df = pd.read_table(args.chromosomes, sep='\t')
-    if args.without_chr:
-        chr_df['UCSC style name'] = chr_df['UCSC style name'].apply(
-            lambda x: str(x).replace("chr", ''))
-    chr_df = chr_df[chr_df['UCSC style name'].isin(args.usable_chromosomes)]
-    chr_names = ["RefSeq seq accession", "UCSC style name"]
-    chromosomes = dict(chr_df[chr_names].to_dict('split')['data'])
+    if args.chromosomes:
+        chr_df = pd.read_table(args.chromosomes, sep='\t')
+        if args.without_chr:
+            chr_df['UCSC style name'] = chr_df['UCSC style name'].apply(
+                lambda x: str(x).replace("chr", ''))
+        chr_df = chr_df[chr_df['UCSC style name'].isin(args.usable_chromosomes)]
+        chr_names = ["RefSeq seq accession", "UCSC style name"]
+        chromosomes = dict(chr_df[chr_names].to_dict('split')['data'])
+    else:
+        chromosomes = False
 
     genes = []
     if args.gene:
@@ -275,10 +278,13 @@ def main(args):
     genes = sorted(set(sum(genes, [])))
 
     gtf_df = parse_gtf(args.gtf, args.source, chromosomes)
+    
     missing_genes = set(genes).difference(set(gtf_df["gene"]))
     keep_genes = set(genes).difference(missing_genes)
-
-    filtered_df = gtf_df[(gtf_df['gene'].isin(genes)) & (gtf_df['type'].isin(args.type))]
+    if genes:
+        filtered_df = gtf_df[(gtf_df['gene'].isin(genes)) & (gtf_df['type'].isin(args.type))]
+    else:
+        filtered_df = gtf_df[(gtf_df['type'].isin(args.type))]
     df_selected = get_bed(filtered_df, args.type, args.padding, chromosomes)
     df_selected.to_csv(
         f'{args.output}.selected.bed',
@@ -287,7 +293,10 @@ def main(args):
     missing_type = keep_genes.difference(set(filtered_df["gene"]))
     bed_selected = pybedtools.BedTool.from_dataframe(df_selected)
 
-    filtered_gene_df = gtf_df[(gtf_df['gene'].isin(genes)) & (gtf_df['type'].isin(["gene"]))]
+    if genes:
+        filtered_gene_df = gtf_df[(gtf_df['gene'].isin(genes)) & (gtf_df['type'].isin(["gene"]))]
+    else:
+        filtered_gene_df = gtf_df[(gtf_df['type'].isin(["gene"]))]
     filtered_gene_df = get_bed(
         filtered_gene_df, ["gene"],
         args.padding, chromosomes)
@@ -435,9 +444,6 @@ def script():
 
     # Argument parsing
     args = parser.parse_args()
-
-    if not (args.gene or args.genes_list):
-        parser.error('No genes provided, add --gene (-g) or --genes-list')
 
     # Execution of the main function
     main(args)
