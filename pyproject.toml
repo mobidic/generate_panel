@@ -28,7 +28,7 @@ dependencies = [
 license = {file = "LICENSE"}
 
 [project.scripts]
-generate-panel = "generate_panels:script"
+generate-panel = "generate_panel:script"
 
 
 [project.urls]
