@@ -345,7 +345,7 @@ def script():
     """
     # Argument configuration
     parser = argparse.ArgumentParser(
-        description="My Generic Python Script",
+        description="Generate a bed panel from a GTF file",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "-v",
@@ -360,7 +360,9 @@ def script():
     parser.add_argument(
         "--gtf",
         help="Specify the gtf file to use", required=True)
-    parser.add_argument(
+    
+    group = parser.add_argument_group('GTF options')
+    group.add_argument(
         "-s",
         "--source",
         help='Specify the source(s) to use ("BestRefSeq", "Curated", '
@@ -368,32 +370,34 @@ def script():
         action=ListAppend,
         nargs="+",
         default=["BestRefSeq"])
-    parser.add_argument(
+    group.add_argument(
         "-t",
         "--type",
         help='Specify the sequence type to analyze ("CDS", "exon", "gene", '
         '"start_codon", "stop_codon", "transcript")',
         action=ListAppend,
         nargs="+",
-        default=["CDS", "start_codon", "stop_codon"])
+        default=["exon"])
 
-    parser.add_argument(
+    group = parser.add_argument_group('Genes options')
+    group.add_argument(
         "-g",
         "--gene",
         help="Specify the gene(s)",
         action=ListAppend,
         nargs='*',
         required=False)
-    parser.add_argument(
+    group.add_argument(
         "--genes-list",
         help="Specify the gene(s)",
         required=False)
 
-    parser.add_argument(
+    group = parser.add_argument_group('Chromosomes options')
+    group.add_argument(
         "--chromosomes",
         help="Specify the file with chromosome correspondences",
         required=False)
-    parser.add_argument(
+    group.add_argument(
         "--usable-chromosomes",
         help='Specify the chromosomes you want to use',
         nargs="+",
@@ -402,24 +406,25 @@ def script():
             "10", "11", "12", "13", "14", "15", "16", "17",
             "18", "19", "20", "21", "22", 'X', 'Y'
             ])
-    parser.add_argument(
+    group.add_argument(
         "-w",
         "--without-chr",
         help="Specify the chromosome format",
         action="store_false",
         default=True)
 
-    parser.add_argument(
+    group = parser.add_argument_group('Variant (ClinVar/LOVD) options')
+    group.add_argument(
         "-c", "--clinvar",
         help="Specify the ClinVar vcf file",
         required=False)
-    parser.add_argument(
+    group.add_argument(
         "--clinvar-type",
         help='Specify the sequence type to check on ClinVar ("CDS", "exon", '
              '"gene", "start_codon", "stop_codon", "transcript")',
         nargs="+",
         default=["gene"])
-    parser.add_argument(
+    group.add_argument(
         "--clinvar-clnsig",
         help='Specify the significance levels for ClinVar ("Pathogenic", '
              '"Likely_pathogenic", "Pathogenic_low_penetrance", '
@@ -431,20 +436,21 @@ def script():
             "Likely_pathogenic_low_penetrance", "Established_risk_allele",
             "Likely_risk_allele"
             ])
-    parser.add_argument(
+    group.add_argument(
         "--lovd",
         help='Specify LOVD file',
         required=False)
-    parser.add_argument(
+    group.add_argument(
         "--max-len-variants",
         help='Specify the max length for clinvar variants',
         default=150)
 
-    parser.add_argument(
+    group = parser.add_argument_group('Other options')
+    group.add_argument(
         "-p",
         "--padding",
         help='Specify the padding to apply',
-        default=50)
+        default=0)
 
     # Argument parsing
     args = parser.parse_args()
