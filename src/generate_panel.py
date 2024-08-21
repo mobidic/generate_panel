@@ -14,6 +14,7 @@ from cyvcf2 import VCF
 from liftover import get_lifter
 import pandas as pd
 import pybedtools
+from extendLib.extArgparse import ListAppend
 
 
 def common_member(first_list, second_list):
@@ -274,8 +275,9 @@ def main(args):
     if args.gene:
         genes = args.gene
     if args.genes_list:
-        genes.append([line.rstrip('\n') for line in open(args.genes_list, 'r')])
-    genes = sorted(set(sum(genes, [])))
+        genes_list_file = [line.rstrip('\n') for line in open(args.genes_list, 'r')]
+        genes += genes_list_file
+    genes = sorted(set(genes))
 
     gtf_df = parse_gtf(args.gtf, args.source, chromosomes)
     
@@ -331,11 +333,11 @@ def main(args):
 
     if missing_genes or missing_type:
         print(f'Missing genes : {len(missing_genes | missing_type)}')
-        for i in missing_genes:
-            print(f'    - {i} (no genes found)')
-        for i in missing_type:
+        for i in sorted(missing_genes):
+            print(f'    - {i} (gene not found)')
+        for i in sorted(missing_type):
             print(f'    - {i} (type {args.type} not found for this gene ; '
-                  'clinvar variants with {args.clinvar_clnsig} were selected)')
+                  'if files were provided variants from LOVD and/or ClinVar will be kept for this gene)')
 
 def script():
     """
@@ -363,6 +365,7 @@ def script():
         "--source",
         help='Specify the source(s) to use ("BestRefSeq", "Curated", '
         '"Gnomon", "RefSeq", "cmsearch", "tRNAscan-SE")',
+        action=ListAppend,
         nargs="+",
         default=["BestRefSeq"])
     parser.add_argument(
@@ -370,6 +373,7 @@ def script():
         "--type",
         help='Specify the sequence type to analyze ("CDS", "exon", "gene", '
         '"start_codon", "stop_codon", "transcript")',
+        action=ListAppend,
         nargs="+",
         default=["CDS", "start_codon", "stop_codon"])
 
@@ -377,7 +381,7 @@ def script():
         "-g",
         "--gene",
         help="Specify the gene(s)",
-        action='append',
+        action=ListAppend,
         nargs='*',
         required=False)
     parser.add_argument(
@@ -444,6 +448,7 @@ def script():
 
     # Argument parsing
     args = parser.parse_args()
+    print(args.type)
 
     # Execution of the main function
     main(args)
