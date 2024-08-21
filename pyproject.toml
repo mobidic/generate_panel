@@ -34,3 +34,8 @@ generate-panel = "generate_panel:script"
 [project.urls]
 Homepage = "https://github.com/mobidic/generate_panels"
 Issues = "https://github.com/mobidic/generate_panels/issues"
+
+[tool.pytest.ini_options]
+pythonpath = [
+  ".", "src"
+]
