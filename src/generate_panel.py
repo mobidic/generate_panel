@@ -328,8 +328,8 @@ def main(args):
         bed_lovd = pybedtools.BedTool.from_dataframe(df_lovd)
         bed_lovd_sub = bed_lovd.subtract(bed_selected).to_dataframe()
 
-        merged_df.to_csv(f'{args.output}.merge.bed', index=False, sep="\t", header=None)
-        merged_df = pd.concat([df_selected, bed_lovd_sub], ignore_index=True)
+        merged_df = pd.concat([merged_df, bed_lovd_sub], ignore_index=True)
+    merged_df.to_csv(f'{args.output}.merge.bed', index=False, sep="\t", header=None)
 
     if missing_genes or missing_type:
         print(f'Missing genes : {len(missing_genes | missing_type)}')
